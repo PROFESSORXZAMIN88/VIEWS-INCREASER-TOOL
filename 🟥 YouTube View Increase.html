@@ -1,0 +1,1212 @@
+<!DOCTYPE html>
+<html lang="en"> <!-- Default to English, will be updated by JS -->
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Screen Video Viewer</title> <!-- Will be updated by JS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        /* Reset and Base Styles */
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-size: 16px;
+        }
+
+        body {
+            font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.4s ease, color 0.4s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Custom Scrollbar (Webkit) */
+        body::-webkit-scrollbar {
+            width: 10px;
+        }
+        body::-webkit-scrollbar-track {
+            background: var(--input-bg-color);
+        }
+        body::-webkit-scrollbar-thumb {
+            background-color: var(--primary-color);
+            border-radius: 20px;
+            border: 2px solid var(--input-bg-color);
+        }
+        body::-webkit-scrollbar-thumb:hover {
+            background-color: var(--primary-hover-color);
+        }
+
+
+        /* Theme Variables */
+        :root {
+            --primary-color: #007bff;
+            --primary-hover-color: #0056b3;
+            --primary-translucent: rgba(0,123,255,0.25);
+            --primary-rgb: 0, 123, 255;
+
+            --success-color: #28a745;
+            --success-hover-color: #1e7e34;
+            --danger-color: #dc3545;
+            --danger-hover-color: #c82333;
+            --secondary-color: #6c757d;
+            --secondary-hover-color: #5a6268;
+            
+            --header-text-color: white;
+            
+            /* Default Dark Theme Values */
+            --bg-color: #121212;
+            --bg-rgb: 18, 18, 18;
+            --text-color: #e0e0e0;
+            --text-rgb: 224, 224, 224;
+            --card-bg-color: #1e1e1e;
+            --card-bg-rgb: 30, 30, 30;
+            --input-bg-color: #2c2c2c;
+            --input-border-color: #3c3c3c;
+            --placeholder-color: #888;
+            --header-bg-color: #1f1f1f;
+            --menu-bg-color: rgba(37, 37, 37, 0.7); /* For glassmorphism */
+            --menu-bg-rgb: 37,37,37;
+            --shadow-color-light: rgba(255,255,255,0.05);
+            --shadow-color-dark: rgba(0,0,0,0.5);
+            --card-shadow: 0 4px 8px rgba(0,0,0,0.2), 0 6px 20px rgba(0,0,0,0.19);
+            --card-hover-shadow: 0 10px 20px rgba(0,0,0,0.25), 0 14px 28px rgba(0,0,0,0.22);
+        }
+
+        body.light-theme {
+            --bg-color: #f4f7f6;
+            --bg-rgb: 244, 247, 246;
+            --text-color: #333;
+            --text-rgb: 51, 51, 51;
+            --card-bg-color: #ffffff;
+            --card-bg-rgb: 255, 255, 255;
+            --input-bg-color: #e9ecef;
+            --input-border-color: #ced4da;
+            --placeholder-color: #6c757d;
+            --header-bg-color: var(--primary-color);
+            --menu-bg-color: rgba(248, 249, 250, 0.75); /* For glassmorphism */
+            --menu-bg-rgb: 248,249,250;
+            --shadow-color-light: rgba(255,255,255,0.5);
+            --shadow-color-dark: rgba(0,0,0,0.1);
+            --card-shadow: 0 4px 8px rgba(0,0,0,0.1), 0 6px 12px rgba(0,0,0,0.08);
+            --card-hover-shadow: 0 8px 16px rgba(0,0,0,0.12), 0 12px 24px rgba(0,0,0,0.1);
+        }
+
+        /* App Container */
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 0;
+            flex-grow: 1;
+            width: 100%;
+        }
+
+        /* Header */
+        header {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.9rem 1.2rem;
+            background-image: linear-gradient(to right, var(--header-bg-color), var(--primary-color));
+            color: var(--header-text-color);
+            box-shadow: 0 3px 10px var(--shadow-color-dark);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        body.light-theme header {
+             background-image: linear-gradient(to right, var(--primary-color), var(--primary-hover-color));
+        }
+
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5em;
+            font-weight: 500;
+            text-align: center;
+            flex-grow: 1;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        /* Hamburger Menu */
+        .menu-toggle {
+            background: transparent;
+            border: none;
+            color: var(--header-text-color);
+            font-size: 1.7em;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 50%;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .menu-toggle:hover {
+            background-color: rgba(255,255,255,0.15);
+            transform: rotate(90deg);
+        }
+        body.light-theme .menu-toggle:hover {
+            background-color: rgba(0,0,0,0.1);
+        }
+
+        .nav-menu {
+            position: fixed;
+            top: 0;
+            left: -320px; /* Increased width */
+            width: 320px;
+            max-width: 85vw;
+            height: 100%;
+            background-color: var(--menu-bg-color);
+            backdrop-filter: blur(12px) saturate(190%);
+            -webkit-backdrop-filter: blur(12px) saturate(190%);
+            border-right: 1px solid rgba(var(--text-rgb), 0.1);
+            color: var(--text-color);
+            box-shadow: 3px 0 15px var(--shadow-color-dark);
+            padding-top: calc(1rem + 40px); /* Header height + some padding */
+            transition: left 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            z-index: 1001;
+            overflow-y: auto;
+        }
+        .nav-menu.open { left: 0; }
+        .nav-menu ul { list-style: none; }
+        .nav-menu ul li { border-bottom: 1px solid rgba(var(--text-rgb), 0.08); }
+        .nav-menu ul li > span, .nav-menu ul li > a {
+            display: flex;
+            align-items: center;
+            padding: 1rem 1.3rem;
+            text-decoration: none;
+            color: inherit;
+            gap: 15px;
+            transition: background-color 0.2s ease, padding-left 0.2s ease;
+            font-weight: 500;
+        }
+        .nav-menu ul li > span:hover, .nav-menu ul li > a:hover {
+            background-color: rgba(var(--primary-rgb), 0.15);
+            padding-left: 1.6rem;
+        }
+        .nav-menu ul li a i {
+            width: 24px;
+            text-align: center;
+            font-size: 1.2em;
+            color: var(--primary-color);
+        }
+        .nav-menu .menu-close-btn {
+            position: absolute;
+            top: 15px; right: 15px;
+            background: none; border: none;
+            font-size: 1.9em; color: var(--text-color);
+            cursor: pointer; padding: 0.3rem;
+            border-radius: 50%;
+            transition: background-color 0.2s ease, transform 0.2s ease;
+        }
+        .nav-menu .menu-close-btn:hover {
+            background-color: rgba(var(--text-rgb), 0.1);
+            transform: rotate(180deg);
+        }
+        .nav-menu .menu-section-title {
+            padding: 0.8rem 1.3rem 0.5rem;
+            font-size: 0.9em;
+            color: var(--placeholder-color);
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-top: 0.6rem;
+            border-bottom: none !important;
+        }
+        .nav-menu .control-options-wrapper { padding: 0.6rem 1.3rem 0.9rem; }
+        .nav-menu .language-select, .nav-menu .theme-select { display: flex; gap: 10px; }
+        .nav-menu button.lang-btn, .nav-menu button.theme-btn {
+            background-color: transparent;
+            border: 1px solid rgba(var(--text-rgb), 0.2);
+            color: var(--text-color);
+            padding: 0.7rem 0; border-radius: 6px;
+            cursor: pointer; flex-grow: 1;
+            font-size: 0.95em; font-weight: 500;
+            transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+        }
+        .nav-menu button.lang-btn:hover, .nav-menu button.theme-btn:hover {
+            border-color: var(--primary-color);
+            background-color: rgba(var(--primary-rgb), 0.1);
+        }
+        .nav-menu button.lang-btn.active, .nav-menu button.theme-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Global Controls */
+        .global-controls {
+            display: flex; flex-wrap: wrap; 
+            gap: 15px; margin: 20px auto;
+            padding: 15px 18px;
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            align-items: center;
+            box-shadow: 0 5px 15px var(--shadow-color-dark);
+            width: 95%; max-width: 1200px;
+        }
+
+        .global-controls button, .controls button {
+            padding: 10px 20px;
+            color: white; border: none;
+            border-radius: 8px; cursor: pointer;
+            font-size: 0.95em; font-weight: 500;
+            transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .global-controls button:hover, .controls button:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 5px 8px rgba(0,0,0,0.25);
+        }
+        .global-controls button:active, .controls button:active {
+            transform: translateY(1px) scale(0.98);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .global-controls button.load-all-btn { background-image: linear-gradient(to right, var(--success-color), #20bf55); }
+        .global-controls button.load-all-btn:hover { background-image: linear-gradient(to right, var(--success-hover-color), #1a9943); }
+        
+        .global-controls button.clear-all-btn { background-image: linear-gradient(to right, var(--danger-color), #d32f2f); }
+        .global-controls button.clear-all-btn:hover { background-image: linear-gradient(to right, var(--danger-hover-color), #b02323); }
+
+        .global-controls .control-group {
+            display: flex; align-items: center;
+            gap: 8px; padding: 8px 12px;
+            background-color: var(--input-bg-color);
+            border-radius: 8px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .global-controls label { font-size: 0.9em; color: var(--text-color); }
+        .global-controls input[type="checkbox"] {
+            transform: scale(1.3);
+            vertical-align: middle;
+            accent-color: var(--primary-color);
+            cursor: pointer;
+            margin-left: 3px;
+        }
+        
+        /* Grid Container */
+        main.grid-container {
+            display: grid;
+            width: calc(100% - 28px);
+            max-width: 1800px;
+            margin: 0 auto 25px auto;
+            gap: 22px;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+            flex-grow: 1;
+            perspective: 2000px; /* For 3D card effects */
+        }
+
+        /* Video Player Card */
+        .video-player-card {
+            background-color: var(--card-bg-color);
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            overflow: hidden;
+            display: flex; flex-direction: column;
+            transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+             will-change: transform, box-shadow;
+        }
+         .video-player-card:hover {
+            transform: perspective(1000px) translateY(-6px) rotateY(2deg) rotateX(1deg) scale(1.02);
+            box-shadow: var(--card-hover-shadow);
+        }
+
+        .iframe-wrapper {
+            position: relative; width: 100%;
+            padding-top: 56.25%; /* 16:9 Aspect Ratio */
+            background-color: #000;
+            border-radius: 10px 10px 0 0; /* Match card radius on top */
+            overflow: hidden; /* Clip iframe if it tries to exceed */
+        }
+
+        .iframe-wrapper iframe {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            border: none;
+        }
+        
+        .placeholder-text {
+            position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+            color: var(--placeholder-color);
+            text-align: center; font-size: 0.95em; padding: 10px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 10px;
+            background: linear-gradient(135deg, rgba(var(--card-bg-rgb),0.8), rgba(var(--input-bg-rgb),0.8));
+        }
+        .placeholder-text i {
+            font-size: 3em;
+            color: var(--primary-color); opacity: 0.6;
+        }
+        .placeholder-text .fa-spinner {
+            animation: fa-spin 1.5s infinite linear;
+        }
+
+        /* Individual Player Controls (Mute, Reload) */
+        .individual-player-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            display: flex;
+            gap: 8px;
+            z-index: 5; /* Above iframe content, below potential modals */
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.25s ease-out, transform 0.25s ease-out;
+        }
+        .video-player-card:hover .individual-player-controls,
+        .video-player-card .individual-player-controls:focus-within {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .individual-player-controls button {
+            background-color: rgba(var(--bg-rgb), 0.7);
+            color: var(--text-color);
+            border: 1px solid rgba(var(--text-rgb), 0.2);
+            backdrop-filter: blur(5px);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            padding: 0; /* Override global button padding */
+            text-transform: none; /* Override */
+            letter-spacing: normal; /* Override */
+        }
+        .individual-player-controls button:hover {
+            background-color: rgba(var(--primary-rgb), 0.7);
+            color: white;
+            border-color: transparent;
+            transform: scale(1.1); /* Override global transform */
+        }
+        .individual-player-controls button:active {
+            transform: scale(0.95); /* Override global transform */
+        }
+
+        .controls {
+            padding: 15px;
+            display: flex; flex-direction: column;
+            gap: 12px;
+            background-color: var(--input-bg-color);
+            border-top: 1px solid var(--input-border-color);
+            border-radius: 0 0 10px 10px; /* Match card radius on bottom */
+        }
+
+        .controls input[type="text"] {
+            width: 100%; 
+            padding: 12px 15px;
+            border: 1px solid var(--input-border-color);
+            border-radius: 6px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-size: 0.95em;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .controls input[type="text"]::placeholder { color: var(--placeholder-color); }
+        .controls input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px var(--primary-translucent), inset 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .controls .button-group { display: flex; gap: 10px; }
+        .controls .button-group button {
+            flex-grow: 1; font-size: 0.9em; padding: 10px 15px;
+        }
+        .controls button.load-btn { background-image: linear-gradient(to right, var(--primary-color), #0062cc); }
+        .controls button.load-btn:hover { background-image: linear-gradient(to right, var(--primary-hover-color), #004c9e); }
+        .controls button.clear-btn { background-image: linear-gradient(to right, var(--secondary-color), #545b62); }
+        .controls button.clear-btn:hover { background-image: linear-gradient(to right, var(--secondary-hover-color), #434a50); }
+
+        .error-message {
+            color: var(--danger-color); font-size: 0.85em;
+            padding: 5px 8px;
+            background-color: rgba(220, 53, 69, 0.1);
+            border: 1px solid rgba(220, 53, 69, 0.3);
+            border-radius: 5px; margin-top: -6px; margin-bottom: 6px;
+            display: none;
+        }
+        
+        footer.app-footer {
+            text-align: center; padding: 1.2rem;
+            font-size: 0.9em; color: var(--placeholder-color);
+            background-color: var(--header-bg-color);
+            margin-top: auto; width: 100%;
+            border-top: 1px solid var(--input-border-color);
+            box-shadow: 0 -2px 5px var(--shadow-color-dark);
+        }
+
+        *:focus-visible {
+            outline: 3px solid var(--primary-color);
+            outline-offset: 2px;
+            box-shadow: 0 0 0 4px var(--primary-translucent);
+        }
+        input[type="text"]:focus-visible, button:focus-visible,
+        .menu-toggle:focus-visible, .nav-menu .menu-close-btn:focus-visible,
+        .nav-menu ul li > a:focus-visible, .nav-menu button.lang-btn:focus-visible,
+        .nav-menu button.theme-btn:focus-visible, .modal-close-btn:focus-visible,
+        .individual-player-controls button:focus-visible {
+            outline: none;
+        }
+        .nav-menu ul li > a:focus-visible,
+        .nav-menu button.lang-btn:focus-visible,
+        .nav-menu button.theme-btn:focus-visible {
+             box-shadow: inset 0 0 0 2px var(--primary-color);
+             background-color: rgba(var(--primary-rgb),0.1);
+        }
+        .menu-toggle:focus-visible, .nav-menu .menu-close-btn:focus-visible {
+            box-shadow: 0 0 0 3px var(--header-text-color);
+        }
+        .individual-player-controls button:focus-visible {
+             box-shadow: 0 0 0 3px var(--primary-color), 0 2px 5px rgba(0,0,0,0.2) !important;
+        }
+
+        .modal {
+            display: none; position: fixed; z-index: 2000;
+            left: 0; top: 0; width: 100%; height: 100%;
+            overflow: auto; background-color: rgba(0,0,0,0.6);
+            align-items: center; justify-content: center;
+            padding: 20px;
+        }
+        .modal-content {
+            background-color: var(--menu-bg-color); /* Using menu-bg for consistency in glass effect */
+            backdrop-filter: blur(15px) saturate(200%);
+            -webkit-backdrop-filter: blur(15px) saturate(200%);
+            border: 1px solid rgba(var(--text-rgb), 0.1);
+            margin: auto; padding: 25px 30px;
+            border-radius: 15px; width: 100%; max-width: 600px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative; animation: fadeInModal 0.35s ease-out;
+        }
+        @keyframes fadeInModal {
+            from { opacity: 0; transform: translateY(-30px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .modal-close-btn {
+            color: var(--placeholder-color);
+            position: absolute; top: 12px; right: 18px;
+            font-size: 2em; line-height: 1; font-weight: bold;
+            cursor: pointer; transition: color 0.2s, transform 0.2s;
+        }
+        .modal-close-btn:hover, .modal-close-btn:focus {
+            color: var(--text-color);
+            transform: scale(1.1) rotate(90deg);
+        }
+        .modal h2 {
+            margin-top: 0; color: var(--primary-color);
+            margin-bottom: 18px; font-size: 1.8em;
+            text-shadow: 1px 1px 1px rgba(0,0,0,0.1);
+        }
+        .modal p { margin-bottom: 15px; line-height: 1.75; font-size: 1em; }
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <header>
+            <button class="menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="navMenu">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1 data-translate="title">Multi-Screen Video Viewer</h1>
+            <div style="width: 48px; height: 48px;"></div>
+        </header>
+
+        <nav class="nav-menu" id="navMenu" aria-hidden="true">
+            <button class="menu-close-btn" aria-label="Close menu">&times;</button>
+            <ul>
+                <li class="menu-section-title"><span data-translate="settings">Settings</span></li>
+                <li>
+                    <span data-translate="language">Language</span>
+                    <div class="control-options-wrapper">
+                        <div class="language-select">
+                            <button class="lang-btn" data-lang="en">English</button>
+                            <button class="lang-btn" data-lang="hi">हिन्दी</button>
+                        </div>
+                    </div>
+                </li>
+                <li>
+                    <span data-translate="theme">Theme</span>
+                     <div class="control-options-wrapper">
+                        <div class="theme-select">
+                            <button class="theme-btn" data-theme="dark" data-translate="themeDark">Dark</button>
+                            <button class="theme-btn" data-theme="light" data-translate="themeLight">Light</button>
+                        </div>
+                    </div>
+                </li>
+
+                <li class="menu-section-title"><span data-translate="connectWithMe">Connect With Me</span></li>
+                <li><a href="https://youtube.com/@movietimewithai?si=JVINGxUeWPJCTgAJ" target="_blank" rel="noopener noreferrer">
+                    <i class="fab fa-youtube"></i><span data-translate="youtubeChannelName">Movie Time With AI 🍿</span>
+                </a></li>
+                <li><a href="https://t.me/aicodingproject" target="_blank" rel="noopener noreferrer">
+                    <i class="fab fa-telegram"></i><span data-translate="telegramGroupName">AI Coding Project</span>
+                </a></li>
+                
+                <li class="menu-section-title"><span data-translate="information">Information</span></li>
+                <li><a href="#" id="aboutAppBtn" role="button">
+                    <i class="fas fa-info-circle"></i><span data-translate="aboutApp">About App</span>
+                </a></li>
+            </ul>
+        </nav>
+
+        <div class="global-controls">
+            <button class="load-all-btn" id="loadAllBtn" data-translate="loadAll">Load All</button>
+            <button class="clear-all-btn" id="clearAllBtn" data-translate="clearAll">Clear All</button>
+            <div class="control-group">
+                <label for="autoplay-checkbox" data-translate="autoplay">Autoplay:</label>
+                <input type="checkbox" id="autoplay-checkbox" checked>
+            </div>
+            <div class="control-group">
+                <label for="mute-checkbox" data-translate="mute">Mute All:</label>
+                <input type="checkbox" id="mute-checkbox" checked>
+            </div>
+            <div class="control-group">
+                <label for="loop-checkbox" data-translate="loop">Loop:</label>
+                <input type="checkbox" id="loop-checkbox" checked>
+            </div>
+        </div>
+
+        <main class="grid-container" id="gridContainer">
+            <!-- Video player cards will be inserted here by JavaScript -->
+        </main>
+        
+        <footer class="app-footer">
+            <p id="createdByText" data-translate="createdBy">Created by: Movie Time With AI 🍿</p>
+        </footer>
+    </div>
+
+    <div id="aboutModal" class="modal" role="dialog" aria-labelledby="aboutModalTitle" aria-modal="true">
+        <div class="modal-content">
+            <button class="modal-close-btn" id="aboutModalCloseBtn" aria-label="Close dialog">&times;</button>
+            <h2 id="aboutModalTitle" data-translate="aboutApp">About App</h2>
+            <p data-translate="aboutAppTextP1">This application allows you to watch multiple YouTube videos simultaneously in a grid layout. You can control global settings like autoplay, mute, and loop for all videos, as well as individual mute/reload for each player.</p>
+            <p data-translate="aboutAppTextP2">Simply paste a YouTube video URL or Video ID into any of the player cards and click 'Load'. Use the global controls to manage all players or clear them as needed. Hover over a video to access individual controls.</p>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants and State ---
+        const NUM_SCREENS = 15;
+        let currentLanguage = localStorage.getItem('appLanguage') || 'en';
+        let currentTheme = localStorage.getItem('appTheme') || 'dark';
+        let ytPlayers = {}; // Store YouTube Player instances
+        let playerReadyPromises = {}; // Store promises for player readiness
+        let isYouTubeApiReady = false;
+
+
+        // --- Translations Object ---
+        const translations = {
+            en: {
+                title: "Multi-Screen Video Viewer",
+                loadAll: "Load All",
+                clearAll: "Clear All",
+                autoplay: "Autoplay:",
+                mute: "Mute All:", // Changed label
+                loop: "Loop:",
+                videoPlaceholder: (index) => `Player ${index + 1} - YouTube Link or ID`,
+                videoPlaceholderIconText: "Paste YouTube Link or ID",
+                videoLoading: "Loading video...",
+                load: "Load",
+                clear: "Clear",
+                invalidUrlError: (index) => `Invalid YouTube link or ID for Player ${index + 1}.`,
+                playerError: (index, errCode) => `Player ${index+1} error: ${errCode}. Try reloading.`,
+                confirmClearAll: "Are you sure you want to clear all video links and players?",
+                settings: "Settings",
+                language: "Language",
+                theme: "Theme",
+                themeDark: "Dark",
+                themeLight: "Light",
+                connectWithMe: "Connect With Me",
+                youtubeChannelName: "Movie Time With AI 🍿",
+                telegramGroupName: "AI Coding Project",
+                information: "Information",
+                aboutApp: "About App",
+                createdBy: "Created by: Movie Time With AI 🍿",
+                aboutAppTextP1: "This application allows you to watch multiple YouTube videos simultaneously in a grid layout. You can control global settings like autoplay, mute, and loop for all videos, as well as individual mute/reload for each player.",
+                aboutAppTextP2: "Simply paste a YouTube video URL or Video ID into any of the player cards and click 'Load'. Use the global controls to manage all players or clear them as needed. Hover over a video to access individual controls.",
+                menuOpen: "Open menu",
+                menuClose: "Close menu",
+                videoPlayerTitle: (index) => `YouTube Video Player ${index + 1}`,
+                muteVideo: "Mute/Unmute Video",
+                reloadVideo: "Reload Video"
+            },
+            hi: {
+                title: "मल्टी-स्क्रीन वीडियो व्यूअर",
+                loadAll: "सभी लोड करें",
+                clearAll: "सभी साफ़ करें",
+                autoplay: "ऑटोप्ले:",
+                mute: "सभी म्यूट करें:", // Changed label
+                loop: "लूप:",
+                videoPlaceholder: (index) => `प्लेयर ${index + 1} - यूट्यूब लिंक या ID`,
+                videoPlaceholderIconText: "यूट्यूब लिंक या ID पेस्ट करें",
+                videoLoading: "वीडियो लोड हो रहा है...",
+                load: "लोड करें",
+                clear: "साफ़ करें",
+                invalidUrlError: (index) => `प्लेयर ${index + 1} के लिए अमान्य YouTube लिंक या ID.`,
+                playerError: (index, errCode) => `प्लेयर ${index+1} त्रुटि: ${errCode}. पुनः लोड करने का प्रयास करें।`,
+                confirmClearAll: "क्या आप वाकई सभी वीडियो लिंक और प्लेयर साफ़ करना चाहते हैं?",
+                settings: "सेटिंग्स",
+                language: "भाषा",
+                theme: "थीम",
+                themeDark: "डार्क",
+                themeLight: "लाइट",
+                connectWithMe: "मुझसे जुड़ें",
+                youtubeChannelName: "Movie Time With AI 🍿",
+                telegramGroupName: "AI Coding Project",
+                information: "जानकारी",
+                aboutApp: "ऐप के बारे में",
+                createdBy: "निर्माता: Movie Time With AI 🍿",
+                aboutAppTextP1: "यह एप्लिकेशन आपको ग्रिड लेआउट में एक साथ कई यूट्यूब वीडियो देखने की अनुमति देता है। आप सभी वीडियो के लिए ऑटोप्ले, म्यूट और लूप जैसी वैश्विक सेटिंग्स को नियंत्रित कर सकते हैं, साथ ही प्रत्येक प्लेयर के लिए व्यक्तिगत म्यूट/रीलोड भी कर सकते हैं।",
+                aboutAppTextP2: "बस किसी भी प्लेयर कार्ड में यूट्यूब वीडियो यूआरएल या वीडियो आईडी पेस्ट करें और 'लोड करें' पर क्लिक करें। सभी प्लेयर को प्रबंधित करने या आवश्यकतानुसार उन्हें साफ़ करने के लिए वैश्विक नियंत्रणों का उपयोग करें। व्यक्तिगत नियंत्रणों तक पहुंचने के लिए वीडियो पर होवर करें।",
+                menuOpen: "मेनू खोलें",
+                menuClose: "मेनू बंद करें",
+                videoPlayerTitle: (index) => `यूट्यूब वीडियो प्लेयर ${index + 1}`,
+                muteVideo: "वीडियो म्यूट/अनम्यूट करें",
+                reloadVideo: "वीडियो पुनः लोड करें"
+            }
+        };
+        
+        // --- Load YouTube IFrame API ---
+        var tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        var firstScriptTag = document.getElementsByTagName('script')[0];
+        firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+
+        window.onYouTubeIframeAPIReady = function() {
+            isYouTubeApiReady = true;
+            // If any players were queued for creation or URLs were present on load, process them.
+            // This can be handled by checking `localStorage` again or a queue.
+            // For simplicity, user might need to click load again if API loads after their input.
+            // Or, re-trigger load for items with URLs in localStorage
+            for (let i = 0; i < NUM_SCREENS; i++) {
+                const savedUrl = localStorage.getItem(`video-url-${i}`);
+                 const urlInput = document.getElementById(`video-url-${i}`);
+                if (savedUrl && urlInput && urlInput.value === savedUrl && !ytPlayers[i]) {
+                    // If URL is in input and matches saved, and no player, attempt to load
+                    // This helps if API loads after initial DOMContentLoaded where loadPlayerState was called
+                    // loadVideo(i, savedUrl); // Careful: this might auto-play many videos on load
+                }
+            }
+            console.log("YouTube IFrame API Ready");
+        };
+
+        // --- DOM Element References ---
+        const gridContainer = document.getElementById('gridContainer');
+        const menuToggle = document.querySelector('.menu-toggle');
+        const navMenu = document.getElementById('navMenu');
+        const menuCloseBtn = navMenu.querySelector('.menu-close-btn');
+        const aboutModal = document.getElementById('aboutModal');
+        const aboutAppBtn = document.getElementById('aboutAppBtn');
+        const aboutModalCloseBtn = document.getElementById('aboutModalCloseBtn');
+        
+        // --- Core Video Logic ---
+        function getVideoIdFromUrl(url) {
+            if (!url || typeof url !== 'string') return null;
+            let videoId = null;
+            const trimmedUrl = url.trim();
+
+            if (/^[a-zA-Z0-9_-]{11}$/.test(trimmedUrl)) return trimmedUrl;
+
+            try {
+                const fullUrl = trimmedUrl.startsWith('http') ? trimmedUrl : `https://${trimmedUrl}`;
+                const urlObj = new URL(fullUrl);
+                if (urlObj.hostname.includes('youtube.com')) {
+                    if (urlObj.pathname === '/watch') videoId = urlObj.searchParams.get('v');
+                    else if (urlObj.pathname.startsWith('/shorts/')) videoId = urlObj.pathname.split('/shorts/')[1].split('/')[0];
+                    else if (urlObj.pathname.startsWith('/embed/')) videoId = urlObj.pathname.split('/embed/')[1].split('/')[0];
+                    else if (urlObj.pathname.startsWith('/live/')) videoId = urlObj.pathname.split('/live/')[1].split('/')[0];
+                } else if (urlObj.hostname === 'youtu.be') {
+                    videoId = urlObj.pathname.substring(1).split('/')[0];
+                }
+            } catch (e) {
+                const regex = /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/|live\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+                const match = trimmedUrl.match(regex);
+                if (match && match[1]) videoId = match[1];
+                else console.warn("Could not parse Video ID from URL:", url, e.message);
+            }
+            return videoId && /^[a-zA-Z0-9_-]{11}$/.test(videoId) ? videoId : null;
+        }
+
+        function createVideoPlayerCard(index) {
+            const card = document.createElement('div');
+            card.className = 'video-player-card';
+            card.id = `player-card-${index}`;
+
+            const iframeWrapper = document.createElement('div');
+            iframeWrapper.className = 'iframe-wrapper';
+            
+            // Placeholder (for icon before load, and loading spinner)
+            const placeholder = document.createElement('div');
+            placeholder.className = 'placeholder-text';
+            // Initial icon placeholder, will be updated dynamically
+            placeholder.innerHTML = `<i class="fab fa-youtube"></i><span data-translate-dynamic="videoPlaceholderIconText"></span>`;
+            iframeWrapper.appendChild(placeholder);
+
+            // Iframe element itself (will be targeted by YT API)
+            const iframeElement = document.createElement('div'); // YT API will replace this div
+            iframeElement.id = `video-iframe-container-${index}`; // Unique ID for YT.Player target
+            iframeWrapper.appendChild(iframeElement);
+
+            // Individual player controls (mute, reload)
+            const individualControls = document.createElement('div');
+            individualControls.className = 'individual-player-controls';
+
+            const muteBtn = document.createElement('button');
+            muteBtn.className = 'individual-mute-btn';
+            muteBtn.innerHTML = '<i class="fas fa-volume-mute"></i>'; // Initial icon
+            muteBtn.setAttribute('aria-label', translations[currentLanguage].muteVideo);
+            muteBtn.addEventListener('click', () => toggleMutePlayer(index));
+
+            const reloadBtn = document.createElement('button');
+            reloadBtn.className = 'individual-reload-btn';
+            reloadBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            reloadBtn.setAttribute('aria-label', translations[currentLanguage].reloadVideo);
+            reloadBtn.addEventListener('click', () => reloadPlayer(index));
+
+            individualControls.appendChild(muteBtn);
+            individualControls.appendChild(reloadBtn);
+            iframeWrapper.appendChild(individualControls); // Placed on top of iframe-wrapper
+
+            const controlsDiv = document.createElement('div');
+            controlsDiv.className = 'controls';
+
+            const urlInput = document.createElement('input');
+            urlInput.type = 'text';
+            urlInput.id = `video-url-${index}`;
+            urlInput.setAttribute('aria-label', `Video URL for player ${index + 1}`);
+            
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'error-message';
+            errorMessage.id = `error-message-${index}`;
+            errorMessage.setAttribute('role', 'alert');
+            errorMessage.style.display = 'none';
+
+            const buttonGroup = document.createElement('div');
+            buttonGroup.className = 'button-group';
+
+            const loadButton = document.createElement('button');
+            loadButton.id = `load-btn-${index}`;
+            loadButton.className = 'load-btn';
+            
+            const clearButton = document.createElement('button');
+            clearButton.id = `clear-btn-${index}`;
+            clearButton.className = 'clear-btn';
+
+            buttonGroup.appendChild(loadButton);
+            buttonGroup.appendChild(clearButton);
+            controlsDiv.appendChild(urlInput);
+            controlsDiv.appendChild(errorMessage);
+            controlsDiv.appendChild(buttonGroup);
+            card.appendChild(iframeWrapper);
+            card.appendChild(controlsDiv);
+            
+            card.playerElements = { urlInput, placeholder, iframeContainer: iframeElement, errorMessage, loadButton, clearButton, muteBtn, reloadBtn };
+
+            urlInput.addEventListener('paste', () => setTimeout(() => loadVideo(index), 0));
+            urlInput.addEventListener('keypress', (event) => { if (event.key === 'Enter') loadVideo(index); });
+            loadButton.addEventListener('click', () => loadVideo(index));
+            clearButton.addEventListener('click', () => clearVideo(index));
+
+            return card;
+        }
+        
+        function getPlayerVars(videoId) {
+            const isAutoplay = document.getElementById('autoplay-checkbox').checked;
+            const isGlobalMuted = document.getElementById('mute-checkbox').checked; // For initial mute
+            const isLoop = document.getElementById('loop-checkbox').checked;
+            
+            let vars = {
+                'playsinline': 1,
+                'enablejsapi': 1,
+                'origin': window.location.origin,
+                'autoplay': isAutoplay ? 1 : 0,
+                'mute': isGlobalMuted ? 1 : 0, // Initial mute state
+                // 'controls': 0, // Optional: hide YouTube's default controls
+                // 'modestbranding': 1, // Optional
+                // 'rel': 0 // Optional: no related videos at end
+            };
+            if (isLoop) {
+                vars.loop = 1;
+                vars.playlist = videoId;
+            }
+            return vars;
+        }
+
+        function onPlayerReady(event, index) {
+            console.log(`Player ${index+1} ready.`);
+            const card = document.getElementById(`player-card-${index}`);
+            if (card && card.playerElements) card.playerElements.placeholder.style.display = 'none';
+            
+            // Player is ready, apply mute state based on its own state (could have been unmuted by user action if already loaded)
+            // Or, ensure global mute applies if checked
+            const globalMuteCheckbox = document.getElementById('mute-checkbox');
+            if (globalMuteCheckbox.checked && !event.target.isMuted()) {
+                 event.target.mute();
+            }
+            updateMuteButtonIcon(index, event.target.isMuted());
+        }
+
+        function onPlayerStateChange(event, index) {
+            // console.log(`Player ${index+1} state changed: ${event.data}`);
+             if (event.target.isMuted && typeof event.target.isMuted === 'function') { // Check method exists
+                updateMuteButtonIcon(index, event.target.isMuted());
+            }
+        }
+
+        function onPlayerError(event, index) {
+            console.error(`Error for player ${index+1}:`, event.data);
+            const card = document.getElementById(`player-card-${index}`);
+            if (card && card.playerElements) {
+                const { placeholder, errorMessage } = card.playerElements;
+                errorMessage.textContent = translations[currentLanguage].playerError(index + 1, event.data);
+                errorMessage.style.display = 'block';
+                // Reset placeholder to YouTube icon
+                placeholder.innerHTML = `<i class="fab fa-youtube"></i><span data-translate-dynamic="videoPlaceholderIconText">${translations[currentLanguage].videoPlaceholderIconText}</span>`;
+                placeholder.style.display = 'flex';
+            }
+        }
+        
+        function loadVideo(index, videoUrlToLoad = null) {
+            if (!isYouTubeApiReady) {
+                console.warn("YouTube API not ready yet. Video load queued or will fail.");
+                // Optionally, queue this call or alert user. For now, let it try and potentially fail gracefully.
+                // Or show a message like "API loading, please wait and try again"
+            }
+
+            const card = document.getElementById(`player-card-${index}`);
+            if (!card || !card.playerElements) return;
+            const { urlInput, placeholder, iframeContainer, errorMessage } = card.playerElements;
+            const rawUrl = videoUrlToLoad !== null ? videoUrlToLoad : urlInput.value;
+            
+            errorMessage.style.display = 'none';
+            placeholder.innerHTML = `<i class="fas fa-spinner fa-spin"></i><span data-translate-dynamic="videoLoading">${translations[currentLanguage].videoLoading}</span>`;
+            placeholder.style.display = 'flex';
+
+
+            if (!rawUrl.trim()) { 
+                clearVideo(index); // This will also reset placeholder
+                return;
+            }
+
+            const videoId = getVideoIdFromUrl(rawUrl);
+
+            if (videoId) {
+                if (ytPlayers[index] && typeof ytPlayers[index].loadVideoById === 'function') {
+                    ytPlayers[index].loadVideoById({ 'videoId': videoId });
+                    // onPlayerReady will handle placeholder hiding
+                } else {
+                    // Destroy old player if it exists but is not functional (e.g. from previous failed load)
+                    if (ytPlayers[index] && typeof ytPlayers[index].destroy === 'function') {
+                        ytPlayers[index].destroy();
+                    }
+                    // Make sure the target div for YT.Player is empty or reset if needed
+                    iframeContainer.innerHTML = ''; // Clear previous iframe if any was manually inserted
+
+                    playerReadyPromises[index] = new Promise((resolve) => {
+                         ytPlayers[index] = new YT.Player(iframeContainer.id, {
+                            height: '100%', // Will be controlled by CSS aspect ratio
+                            width: '100%',
+                            videoId: videoId,
+                            playerVars: getPlayerVars(videoId),
+                            events: {
+                                'onReady': (event) => { onPlayerReady(event, index); resolve(event.target); },
+                                'onStateChange': (event) => onPlayerStateChange(event, index),
+                                'onError': (event) => onPlayerError(event, index)
+                            }
+                        });
+                    });
+                }
+                
+                if (!rawUrl.includes('youtube.com/') && !rawUrl.includes('youtu.be/')) {
+                    urlInput.value = `https://www.youtube.com/watch?v=${videoId}`;
+                } else {
+                    urlInput.value = rawUrl;
+                }
+                savePlayerState(index, urlInput.value);
+
+            } else { // Invalid Video ID
+                if (ytPlayers[index] && typeof ytPlayers[index].destroy === 'function') {
+                    ytPlayers[index].destroy();
+                    delete ytPlayers[index];
+                }
+                placeholder.innerHTML = `<i class="fab fa-youtube"></i><span data-translate-dynamic="videoPlaceholderIconText">${translations[currentLanguage].videoPlaceholderIconText}</span>`;
+                placeholder.style.display = 'flex';
+                errorMessage.textContent = translations[currentLanguage].invalidUrlError(index);
+                errorMessage.style.display = 'block';
+                clearPlayerState(index);
+            }
+        }
+        
+        function clearVideo(index) {
+            const card = document.getElementById(`player-card-${index}`);
+            if (!card || !card.playerElements) return;
+            const { urlInput, placeholder, iframeContainer, errorMessage } = card.playerElements;
+
+            if (ytPlayers[index] && typeof ytPlayers[index].destroy === 'function') {
+                ytPlayers[index].destroy();
+                delete ytPlayers[index];
+                if (playerReadyPromises[index]) delete playerReadyPromises[index];
+            }
+            // Clear the container that held the iframe
+            iframeContainer.innerHTML = ''; 
+            
+            urlInput.value = '';
+            placeholder.innerHTML = `<i class="fab fa-youtube"></i><span data-translate-dynamic="videoPlaceholderIconText">${translations[currentLanguage].videoPlaceholderIconText}</span>`;
+            placeholder.style.display = 'flex';
+            errorMessage.style.display = 'none';
+            updateMuteButtonIcon(index, true); // Reset mute icon to muted state
+            clearPlayerState(index);
+        }
+
+        function toggleMutePlayer(index) {
+            if (ytPlayers[index] && typeof ytPlayers[index].isMuted === 'function') {
+                if (ytPlayers[index].isMuted()) {
+                    ytPlayers[index].unMute();
+                } else {
+                    ytPlayers[index].mute();
+                }
+                updateMuteButtonIcon(index, ytPlayers[index].isMuted());
+            }
+        }
+
+        function updateMuteButtonIcon(index, isMutedState) {
+            const card = document.getElementById(`player-card-${index}`);
+            if (card && card.playerElements && card.playerElements.muteBtn) {
+                const muteIcon = card.playerElements.muteBtn.querySelector('i');
+                if (muteIcon) {
+                    muteIcon.className = isMutedState ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+                }
+            }
+        }
+
+        function reloadPlayer(index) {
+            const card = document.getElementById(`player-card-${index}`);
+            if (!card || !card.playerElements) return;
+             const { urlInput, errorMessage } = card.playerElements;
+
+            errorMessage.style.display = 'none'; // Hide previous error
+
+            if (ytPlayers[index] && typeof ytPlayers[index].getVideoData === 'function' && ytPlayers[index].getVideoData()?.video_id) {
+                // If player exists and has a video loaded, reload current video
+                const currentVideoId = ytPlayers[index].getVideoData().video_id;
+                ytPlayers[index].loadVideoById(currentVideoId); // This should trigger onPlayerReady etc.
+            } else if (urlInput.value.trim()) {
+                // If player doesn't exist or no video loaded, try loading from URL input
+                loadVideo(index, urlInput.value.trim());
+            } else {
+                // No video to reload
+                console.warn(`Player ${index+1}: No video information to reload.`);
+            }
+        }
+
+        // --- Global Controls Logic ---
+        function loadAllVideos() {
+            for (let i = 0; i < NUM_SCREENS; i++) {
+                const urlInput = document.getElementById(`video-url-${i}`);
+                if (urlInput && urlInput.value.trim() !== '') {
+                    loadVideo(i);
+                }
+            }
+        }
+        
+        function clearAllVideos() {
+            if (confirm(translations[currentLanguage].confirmClearAll)) {
+                for (let i = 0; i < NUM_SCREENS; i++) {
+                    clearVideo(i);
+                }
+            }
+        }
+
+        function initializePlayers() {
+            for (let i = 0; i < NUM_SCREENS; i++) {
+                const playerCard = createVideoPlayerCard(i);
+                gridContainer.appendChild(playerCard);
+                loadPlayerState(i); 
+            }
+        }
+        
+        function savePlayerState(index, url) { localStorage.setItem(`video-url-${index}`, url); }
+        function loadPlayerState(index) {
+            const savedUrl = localStorage.getItem(`video-url-${index}`);
+            if (savedUrl) {
+                const urlInput = document.getElementById(`video-url-${index}`);
+                if (urlInput) urlInput.value = savedUrl;
+                // Do NOT auto-load here, let user click "Load" or "Load All"
+                // or handle it in onYouTubeIframeAPIReady if desired.
+            }
+        }
+        function clearPlayerState(index) { localStorage.removeItem(`video-url-${index}`); }
+
+        function persistCheckboxStates() {
+            ['autoplay-checkbox', 'mute-checkbox', 'loop-checkbox'].forEach(id => {
+                const checkbox = document.getElementById(id);
+                if(checkbox) {
+                    const savedState = localStorage.getItem(id);
+                    if (savedState !== null) checkbox.checked = savedState === 'true';
+                    
+                    checkbox.addEventListener('change', () => {
+                        localStorage.setItem(id, checkbox.checked);
+                        if (id === 'mute-checkbox') { // Handle "Mute All" toggle
+                            const globalMuteState = checkbox.checked;
+                            Object.values(ytPlayers).forEach(player => {
+                                if (player && typeof player.isMuted === 'function') {
+                                    if (globalMuteState) player.mute();
+                                    else player.unMute();
+                                    // Find index for this player to update its button - This is tricky
+                                    // For simplicity, individual buttons update on player state change
+                                }
+                            });
+                        }
+                        // Note: Changing these won't affect already loaded videos fully unless they are reloaded
+                        // or specifically handled, like the Mute All example above.
+                    });
+                }
+            });
+        }
+
+        function toggleMenu(show) { /* ... (same as before) ... */ 
+            const open = typeof show === 'boolean' ? show : !navMenu.classList.contains('open');
+            menuToggle.setAttribute('aria-expanded', open);
+            navMenu.classList.toggle('open', open);
+            navMenu.setAttribute('aria-hidden', !open);
+            if (open) navMenu.querySelector('ul li > a, ul li button')?.focus();
+            else menuToggle.focus();
+        }
+
+        function applyTheme(theme) { /* ... (same as before) ... */ 
+            document.body.classList.remove('light-theme', 'dark-theme');
+            document.body.classList.add(theme + '-theme');
+            currentTheme = theme;
+            localStorage.setItem('appTheme', theme);
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.theme === theme);
+            });
+        }
+
+        function applyLanguage(lang) { /* ... (same as before, check for new elements) ... */ 
+            currentLanguage = lang;
+            localStorage.setItem('appLanguage', lang);
+            document.documentElement.lang = lang;
+            
+            const langData = translations[currentLanguage];
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.dataset.translate;
+                if (langData[key] && typeof langData[key] === 'string') {
+                     el.textContent = langData[key];
+                }
+            });
+
+            for (let i = 0; i < NUM_SCREENS; i++) {
+                const card = document.getElementById(`player-card-${i}`);
+                if (card && card.playerElements) {
+                    const { urlInput, placeholder, iframeContainer, loadButton, clearButton, muteBtn, reloadBtn } = card.playerElements;
+                    const placeholderTextSpan = placeholder.querySelector('[data-translate-dynamic="videoPlaceholderIconText"]');
+                    const loadingTextSpan = placeholder.querySelector('[data-translate-dynamic="videoLoading"]');
+                    
+                    if(urlInput) urlInput.placeholder = langData.videoPlaceholder(i); // (index) in placeholder text
+                    // iframe.title is handled by YT API now, or set on iframeContainer if needed.
+                    // For the div that YT API replaces:
+                    const actualIframe = iframeContainer.querySelector('iframe');
+                    if(actualIframe) actualIframe.title = langData.videoPlayerTitle(i);
+                    
+                    if(placeholderTextSpan) placeholderTextSpan.textContent = langData.videoPlaceholderIconText;
+                    if(loadingTextSpan) loadingTextSpan.textContent = langData.videoLoading;
+                    
+                    if(loadButton) loadButton.textContent = langData.load;
+                    if(clearButton) clearButton.textContent = langData.clear;
+                    if(muteBtn) muteBtn.setAttribute('aria-label', langData.muteVideo);
+                    if(reloadBtn) reloadBtn.setAttribute('aria-label', langData.reloadVideo);
+
+                     // Update error message if visible
+                    const errorMsg = document.getElementById(`error-message-${i}`);
+                    if (errorMsg && errorMsg.style.display !== 'none' && errorMsg.dataset.errorCode) {
+                        errorMsg.textContent = langData.playerError(i, errorMsg.dataset.errorCode);
+                    } else if (errorMsg && errorMsg.style.display !== 'none' && errorMsg.textContent.includes('Invalid')) { // for invalid URL
+                         errorMsg.textContent = langData.invalidUrlError(i);
+                    }
+
+                }
+            }
+            menuToggle.setAttribute('aria-label', langData.menuOpen);
+            menuCloseBtn.setAttribute('aria-label', langData.menuClose);
+
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang);
+            });
+        }
+        
+        function toggleModal(modalElement, show) { /* ... (same as before) ... */ 
+            if (!modalElement) return;
+            const currentlyOpen = modalElement.style.display === 'flex';
+            const open = typeof show === 'boolean' ? show : !currentlyOpen;
+
+            modalElement.style.display = open ? 'flex' : 'none';
+            if (open) {
+                modalElement.querySelector('.modal-close-btn, button, a, input')?.focus();
+            }
+        }
+
+        function setupEventListeners() { /* ... (same as before) ... */ 
+            menuToggle.addEventListener('click', () => toggleMenu());
+            menuCloseBtn.addEventListener('click', () => toggleMenu(false));
+            
+            document.addEventListener('click', (event) => {
+                if (navMenu.classList.contains('open') && !navMenu.contains(event.target) && !menuToggle.contains(event.target)) {
+                    toggleMenu(false);
+                }
+            });
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    if (navMenu.classList.contains('open')) toggleMenu(false);
+                    if (aboutModal.style.display === 'flex') toggleModal(aboutModal, false);
+                }
+            });
+
+            navMenu.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
+            });
+            navMenu.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', () => applyTheme(btn.dataset.theme));
+            });
+
+            document.getElementById('loadAllBtn').addEventListener('click', loadAllVideos);
+            document.getElementById('clearAllBtn').addEventListener('click', clearAllVideos);
+            
+            aboutAppBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                toggleModal(aboutModal, true);
+                if (navMenu.classList.contains('open')) toggleMenu(false);
+            });
+            aboutModalCloseBtn.addEventListener('click', () => toggleModal(aboutModal, false));
+            aboutModal.addEventListener('click', (event) => {
+                if (event.target === aboutModal) toggleModal(aboutModal, false);
+            });
+
+            persistCheckboxStates();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            applyTheme(currentTheme); 
+            initializePlayers();
+            applyLanguage(currentLanguage);
+            setupEventListeners();
+        });
+    </script>
+</body>
+</html>
